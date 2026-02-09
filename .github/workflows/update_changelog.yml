@@ -45,13 +45,30 @@ jobs:
               if (!hasAddedTitle || !hasChangedTitle || !hasRemovedTitle) {
                 summary = 'All subsections (### Added, ### Changed, and ### Removed) need to be present.';
               } else {
-                // Check for at least one subsection (Added, Changed, or Removed)
-                const hasAdded = /###\s+Added\s*\n\s*\-\s+[^\-\s\#]/.test(changesContent);
-                const hasChanged = /###\s+Changed\s*\n\s*\-\s+[^\-\s\#]/.test(changesContent);
-                const hasRemoved = /###\s+Removed\s*\n\s*\-\s+[^\-\s\#]/.test(changesContent);
+                // Extract each subsection and check for non-empty bullet points
+                const addedSection = changesContent.match(/###\s+Added\s*\n([\s\S]*?)(?=\n###\s|\Z)/i);
+                const changedSection = changesContent.match(/###\s+Changed\s*\n([\s\S]*?)(?=\n###\s|\Z)/i);
+                const removedSection = changesContent.match(/###\s+Removed\s*\n([\s\S]*?)(?=\n###\s|\Z)/i);
+                
+                // Function to check if a section has valid bullet points with actual content
+                const hasValidBullets = (sectionContent) => {
+                  if (!sectionContent) return false;
+                  // Match bullet points that have non-whitespace content after the dash
+                  const bullets = sectionContent.match(/^\s*-\s*(.+)$/gm);
+                  if (!bullets) return false;
+                  // Check if at least one bullet has actual content (not just whitespace)
+                  return bullets.some(bullet => {
+                    const content = bullet.replace(/^\s*-\s*/, '').trim();
+                    return content.length > 0;
+                  });
+                };
 
-                if (!hasAdded && !hasChanged && !hasRemoved) {
-                  summary = 'At least one of the changes subsection (### Added, ### Changed, and ### Removed) should have bullet points';
+                const hasValidAdded = addedSection && hasValidBullets(addedSection[1]);
+                const hasValidChanged = changedSection && hasValidBullets(changedSection[1]);
+                const hasValidRemoved = removedSection && hasValidBullets(removedSection[1]);
+                
+                if (!hasValidAdded && !hasValidChanged && !hasValidRemoved) {
+                  summary = 'At least one subsection (### Added, ### Changed, or ### Removed) must have bullet points with actual content. Empty bullets (- with no text) are not allowed.';
                 } else {
                   conclusion = 'success';
                   title = '✅ Changes section is valid';
