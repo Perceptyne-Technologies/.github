@@ -23,21 +23,10 @@ Describe in one liners each change made in this PR.
 -->
 
 ### Added
-<!--
-List the things added in this PR.
--->
-
 
 ### Changed
-<!--
-List the changes in this PR as one-liners.
--->
-
 
 ### Removed
-<!--
-List the things removed from the codebase in this PR.
--->
 
 ---
 

@@ -25,52 +25,6 @@ jobs:
           script: |
             const prBody = context.payload.pull_request.body || '';
 
-            // Extract the Changes section with the specific format
-            // ## Changes
-            // ### Added
-            // * Point
-            // ### Changed
-            // * Point
-            // ### Removed
-            // * Point
-            const changesRegex = /##\s+Changes\s*\n([\s\S]*?)(?=\n##\s|\Z)/i;
-            const match = prBody.match(changesRegex);
-
-            if (!match || !match[1]) {
-              core.setFailed('❌ No "## Changes" section found in PR description');
-              return { valid: false, reason: 'missing_section' };
-            }
-
-            const changesContent = match[1].trim();
-
-            // Check if all subsections are present
-            const hasAddedTitle = /###\s+Added/.test(changesContent);
-            const hasChangedTitle = /###\s+Changed/.test(changesContent);
-            const hasRemovedTitle = /###\s+Removed/.test(changesContent);
-
-            if (!hasAddedTitle || !hasChangedTitle || !hasRemovedTitle) {
-              core.setFailed(`❌ All subsections (### Added, ### Changed, and ### Removed) need to be present.`);
-              return { valid: false, reason: 'missing_subsctions'}
-            }
-
-            // Check for at least one subsection (Added, Changed, or Removed)
-            const hasAdded = /###\s+Added\s*\n\s*\-/.test(changesContent);
-            const hasChanged = /###\s+Changed\s*\n\s*\-/.test(changesContent);
-            const hasRemoved = /###\s+Removed\s*\n\s*\-/.test(changesContent);
-
-            if (!hasAdded && !hasChanged && !hasRemoved) {
-              core.setFailed('❌ Atleast one of the changes subsection (### Added, ### Changed, and ### Removed) should have bullet points');
-              return { valid: false, reason: 'changes_not_filled' };
-            }
-
-            console.log('✅ Changes section is properly formatted');
-            return { valid: true, changes: changesContent };
-
-      - name: Create check run
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const prBody = context.payload.pull_request.body || '';
             const changesRegex = /##\s+Changes\s*\n([\s\S]*?)(?=\n##\s|\Z)/i;
             const match = prBody.match(changesRegex);
 
@@ -78,37 +32,33 @@ jobs:
             let title = '❌ Changes section missing or invalid';
             let summary = 'Please add a properly formatted Changes section to your PR description.';
 
-            if (match && match[1]) {
+            if (!match || !match[1]) {
+              summary = 'No "## Changes" section found in PR description.';
+            } else {
               const changesContent = match[1].trim();
-              const hasAdded = /###\s+Added\s*\n\s*\*/.test(changesContent);
-              const hasChanged = /###\s+Changed\s*\n\s*\*/.test(changesContent);
-              const hasRemoved = /###\s+Removed\s*\n\s*\*/.test(changesContent);
-              
-              if (hasAdded || hasChanged || hasRemoved) {
-                conclusion = 'success';
-                title = '✅ Changes section is valid';
-                summary = 'Your Changes section is properly formatted and will be added to CHANGELOG.md upon merge.';
+
+              // Check if all subsections are present
+              const hasAddedTitle = /###\s+Added/.test(changesContent);
+              const hasChangedTitle = /###\s+Changed/.test(changesContent);
+              const hasRemovedTitle = /###\s+Removed/.test(changesContent);
+
+              if (!hasAddedTitle || !hasChangedTitle || !hasRemovedTitle) {
+                summary = 'All subsections (### Added, ### Changed, and ### Removed) need to be present.';
+              } else {
+                // Check for at least one subsection (Added, Changed, or Removed)
+                const hasAdded = /###\s+Added\s*\n\s*\-/.test(changesContent);
+                const hasChanged = /###\s+Changed\s*\n\s*\-/.test(changesContent);
+                const hasRemoved = /###\s+Removed\s*\n\s*\-/.test(changesContent);
+
+                if (!hasAdded && !hasChanged && !hasRemoved) {
+                  summary = 'At least one of the changes subsection (### Added, ### Changed, and ### Removed) should have bullet points';
+                } else {
+                  conclusion = 'success';
+                  title = '✅ Changes section is valid';
+                  summary = 'Your Changes section is properly formatted and will be added to CHANGELOG.md upon merge.';
+                }
               }
             }
-
-            const text = `## Required Format:
-
-            \`\`\`markdown
-            ## Changes
-
-            ### Added
-            * New feature or functionality
-            * Another addition
-
-            ### Changed
-            * Modified behavior
-            * Updated dependency
-
-            ### Removed
-            * Deprecated feature
-            \`\`\`
-
-            At least one subsection (Added, Changed, or Removed) with bullet points is required.`;
 
             await github.rest.checks.create({
               owner: context.repo.owner,
@@ -123,6 +73,11 @@ jobs:
                 text: text
               }
             });
+
+            // Also fail the workflow if validation failed (for visibility)
+            if (conclusion === 'failure') {
+              core.setFailed(summary);
+            }
 
   # Job 2: Update changelog on merge (only runs after PR is merged)
   update-changelog:
