@@ -16,14 +16,28 @@ Example:
 
 ---
 
-## Scope of Change
+## Changes Made
+
 <!--
-Briefly describe what changed at a high level.
-Avoid implementation details unless necessary.
+Describe in one liners each change made in this PR.
 -->
 
-- 
-- 
+### Added
+<!--
+List the things added in this PR.
+-->
+
+
+### Changed
+<!--
+List the changes in this PR as one-liners.
+-->
+
+
+### Removed
+<!--
+List the things removed from the codebase in this PR.
+-->
 
 ---
 
@@ -33,16 +47,13 @@ Describe any changes required to integrate this PR with the rest of the stack.
 If none, explicitly say "None".
 -->
 
-- New dependencies:
-  - 
-- Required changes in other packages:
-  - 
-- API / message / parameter changes:
-  - 
-- Backward compatibility:
-  - [ ] Fully backward compatible
-  - [ ] Breaking change (describe below)
-
+- **New dependencies**:
+- **Required changes in other packages**:
+- **API / message / parameter changes**:
+- **Backward compatibility**:
+<!--
+Leave empty if this breaks nothing
+-->
 <!--
 If breaking:
 - What breaks?
@@ -57,16 +68,16 @@ Be specific. Reviewers should be able to reproduce this.
 -->
 
 - Unit tests:
-  - [ ] Added
-  - [ ] Updated
-  - [ ] Not applicable (explain why)
+<!--
+# Added - list what was added.
+# Updated - any changes to unit tests you have done
+# Not done - list and explain why testing is not done
+-->
 - Manual / integration testing:
-  - 
 - Hardware / simulation testing:
   - Robot / Simulator:
   - Scenario / workflow:
 - Edge cases tested (if any):
-  - 
 
 ---
 
@@ -76,18 +87,12 @@ Optional but encouraged.
 Helps reviewers understand trade-offs.
 -->
 
-- 
-- 
-
 ---
 
 ## Future Work
 <!--
 Things intentionally left out of this PR.
 -->
-
-- 
-- 
 
 ---
 
