@@ -46,9 +46,9 @@ jobs:
                 summary = 'All subsections (### Added, ### Changed, and ### Removed) need to be present.';
               } else {
                 // Check for at least one subsection (Added, Changed, or Removed)
-                const hasAdded = /###\s+Added\s*\n\s*\-\s+[^\-\s]/.test(changesContent);
-                const hasChanged = /###\s+Changed\s*\n\s*\-\s+[^\-\s]/.test(changesContent);
-                const hasRemoved = /###\s+Removed\s*\n\s*\-\s+[^\-\s]/.test(changesContent);
+                const hasAdded = /###\s+Added\s*\n\s*\-\s+[^\-\s\#]/.test(changesContent);
+                const hasChanged = /###\s+Changed\s*\n\s*\-\s+[^\-\s\#]/.test(changesContent);
+                const hasRemoved = /###\s+Removed\s*\n\s*\-\s+[^\-\s\#]/.test(changesContent);
 
                 if (!hasAdded && !hasChanged && !hasRemoved) {
                   summary = 'At least one of the changes subsection (### Added, ### Changed, and ### Removed) should have bullet points';
