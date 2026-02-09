@@ -5,6 +5,7 @@ on:
     types: [opened, edited, synchronize, reopened]
   pull_request_target:
     types: [closed]
+  workflow_call:
 
 jobs:
   # Job 1: Validate that PR has proper Changes section (runs on PR open/edit)
