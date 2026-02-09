@@ -70,7 +70,7 @@ jobs:
               output: {
                 title: title,
                 summary: summary,
-                text: text
+                text: "Retain all the subsections under changes and just add hyphen based pointlist."
               }
             });
 
