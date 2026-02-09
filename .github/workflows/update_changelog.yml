@@ -1,0 +1,214 @@
+name: Changelog Validation and Update
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+  pull_request_target:
+    types: [closed]
+
+jobs:
+  # Job 1: Validate that PR has proper Changes section (runs on PR open/edit)
+  validate-changelog:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    permissions:
+      pull-requests: write
+      statuses: write
+      checks: write
+
+    steps:
+      - name: Validate Changes section
+        id: validate
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prBody = context.payload.pull_request.body || '';
+
+            // Extract the Changes section with the specific format
+            // ## Changes
+            // ### Added
+            // * Point
+            // ### Changed
+            // * Point
+            // ### Removed
+            // * Point
+            const changesRegex = /##\s+Changes\s*\n([\s\S]*?)(?=\n##\s|\Z)/i;
+            const match = prBody.match(changesRegex);
+
+            if (!match || !match[1]) {
+              core.setFailed('❌ No "## Changes" section found in PR description');
+              return { valid: false, reason: 'missing_section' };
+            }
+
+            const changesContent = match[1].trim();
+
+            // Check if all subsections are present
+            const hasAddedTitle = /###\s+Added/.test(changesContent);
+            const hasChangedTitle = /###\s+Changed/.test(changesContent);
+            const hasRemovedTitle = /###\s+Removed/.test(changesContent);
+
+            if (!hasAddedTitle || !hasChangedTitle || !hasRemovedTitle) {
+              core.setFailed(`❌ All subsections (### Added, ### Changed, and ### Removed) need to be present.`);
+              return { valid: false, reason: 'missing_subsctions'}
+            }
+
+            // Check for at least one subsection (Added, Changed, or Removed)
+            const hasAdded = /###\s+Added\s*\n\s*\-/.test(changesContent);
+            const hasChanged = /###\s+Changed\s*\n\s*\-/.test(changesContent);
+            const hasRemoved = /###\s+Removed\s*\n\s*\-/.test(changesContent);
+
+            if (!hasAdded && !hasChanged && !hasRemoved) {
+              core.setFailed('❌ Atleast one of the changes subsection (### Added, ### Changed, and ### Removed) should have bullet points');
+              return { valid: false, reason: 'changes_not_filled' };
+            }
+
+            console.log('✅ Changes section is properly formatted');
+            return { valid: true, changes: changesContent };
+
+      - name: Create check run
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prBody = context.payload.pull_request.body || '';
+            const changesRegex = /##\s+Changes\s*\n([\s\S]*?)(?=\n##\s|\Z)/i;
+            const match = prBody.match(changesRegex);
+
+            let conclusion = 'failure';
+            let title = '❌ Changes section missing or invalid';
+            let summary = 'Please add a properly formatted Changes section to your PR description.';
+
+            if (match && match[1]) {
+              const changesContent = match[1].trim();
+              const hasAdded = /###\s+Added\s*\n\s*\*/.test(changesContent);
+              const hasChanged = /###\s+Changed\s*\n\s*\*/.test(changesContent);
+              const hasRemoved = /###\s+Removed\s*\n\s*\*/.test(changesContent);
+              
+              if (hasAdded || hasChanged || hasRemoved) {
+                conclusion = 'success';
+                title = '✅ Changes section is valid';
+                summary = 'Your Changes section is properly formatted and will be added to CHANGELOG.md upon merge.';
+              }
+            }
+
+            const text = `## Required Format:
+
+            \`\`\`markdown
+            ## Changes
+
+            ### Added
+            * New feature or functionality
+            * Another addition
+
+            ### Changed
+            * Modified behavior
+            * Updated dependency
+
+            ### Removed
+            * Deprecated feature
+            \`\`\`
+
+            At least one subsection (Added, Changed, or Removed) with bullet points is required.`;
+
+            await github.rest.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'Changelog Validation',
+              head_sha: context.payload.pull_request.head.sha,
+              status: 'completed',
+              conclusion: conclusion,
+              output: {
+                title: title,
+                summary: summary,
+                text: text
+              }
+            });
+
+  # Job 2: Update changelog on merge (only runs after PR is merged)
+  update-changelog:
+    if: github.event_name == 'pull_request_target' && github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract changes from PR description
+        id: extract
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prBody = context.payload.pull_request.body || '';
+            const prNumber = context.payload.pull_request.number;
+            const prAuthor = context.payload.pull_request.user.login;
+            const mergedAt = context.payload.pull_request.merged_at;
+
+            // Extract the Changes section
+            const changesRegex = /##\s+Changes\s*\n([\s\S]*?)(?=\n##\s|\Z)/i;
+            const match = prBody.match(changesRegex);
+
+            if (!match || !match[1]) {
+              core.setFailed('No Changes section found');
+              return;
+            }
+
+            const changes = match[1].trim();
+
+            // Format the changelog entry
+            const date = new Date(mergedAt).toISOString().split('T')[0];
+            const changelogEntry = `\n## [PR #${prNumber}](${context.payload.pull_request.html_url}) - ${date}\n\n${changes}\n\n*Merged by @${prAuthor}*\n`;
+
+            core.setOutput('changelog_entry', changelogEntry);
+            core.setOutput('pr_number', prNumber);
+
+      - name: Update CHANGELOG.md
+        run: |
+          CHANGELOG_FILE="CHANGELOG.md"
+          ENTRY="${{ steps.extract.outputs.changelog_entry }}"
+
+          # Create CHANGELOG.md if it doesn't exist
+          if [ ! -f "$CHANGELOG_FILE" ]; then
+            echo "# Changelog" > "$CHANGELOG_FILE"
+            echo "" >> "$CHANGELOG_FILE"
+            echo "All notable changes to this project will be documented in this file." >> "$CHANGELOG_FILE"
+            echo "" >> "$CHANGELOG_FILE"
+          fi
+
+          # Create a temporary file with the new entry at the top (after the header)
+          {
+            # Keep the header (first 3 lines if they exist, or just add a new header)
+            head -n 3 "$CHANGELOG_FILE" 2>/dev/null || echo -e "# Changelog\n\nAll notable changes to this project will be documented in this file.\n"
+            # Add the new entry
+            echo "$ENTRY"
+            # Add the rest of the file (skip first 3 lines)
+            tail -n +4 "$CHANGELOG_FILE" 2>/dev/null || true
+          } > CHANGELOG.tmp
+
+          mv CHANGELOG.tmp "$CHANGELOG_FILE"
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add CHANGELOG.md
+          git commit -m "Update CHANGELOG.md for PR #${{ steps.extract.outputs.pr_number }}"
+          git push
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.payload.pull_request.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ CHANGELOG.md has been updated with the changes from this PR!'
+            });

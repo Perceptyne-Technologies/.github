@@ -16,7 +16,7 @@ Example:
 
 ---
 
-## Changes Made
+## Changes
 
 <!--
 Describe in one liners each change made in this PR.
