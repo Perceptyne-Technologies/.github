@@ -38,6 +38,8 @@ jobs:
             } else {
               const changesContent = match[1].trim();
 
+              console.log("Changes Content:", changesContent);
+
               // Check if all subsections are present
               const hasAddedTitle = /###\s+Added/.test(changesContent);
               const hasChangedTitle = /###\s+Changed/.test(changesContent);
@@ -50,12 +52,17 @@ jobs:
                 const addedSection = changesContent.match(/###\s+Added\s*\n([\s\S]*?)(?=\n(###|---)\s|\Z)/i);
                 const changedSection = changesContent.match(/###\s+Changed\s*\n([\s\S]*?)(?=\n(###|---)\s|\Z)/i);
                 const removedSection = changesContent.match(/###\s+Removed\s*\n([\s\S]*?)(?=\n(###|---)\s|\Z)/i);
+
+                console.log("Added Section", addedSection);
+                console.log("Changed Section", changedSection);
+                console.log("Removed Section", removedSection);
                 
                 // Function to check if a section has valid bullet points with actual content
                 const hasValidBullets = (sectionContent) => {
                   if (!sectionContent) return false;
                   // Match bullet points that have non-whitespace content after the dash
                   const bullets = sectionContent.match(/^\s*-\s*(.+)$/gm);
+                  console.log("Bullets Matched", bullets);
                   if (!bullets) return false;
                   // Check if at least one bullet has actual content (not just whitespace)
                   return bullets.some(bullet => {
