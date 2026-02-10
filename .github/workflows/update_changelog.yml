@@ -49,9 +49,9 @@ jobs:
                 summary = 'All subsections (### Added, ### Changed, and ### Removed) need to be present.';
               } else {
                 // Extract each subsection and check for non-empty bullet points
-                const addedSection = changesContent.match(/###\s+Added\s*\n([\s\S]*?)(?=\n(###|---)\s|\Z)/i);
-                const changedSection = changesContent.match(/###\s+Changed\s*\n([\s\S]*?)(?=\n(###|---)\s|\Z)/i);
-                const removedSection = changesContent.match(/###\s+Removed\s*\n([\s\S]*?)(?=\n(###|---)\s|\Z)/i);
+                const addedSection = changesContent.match(/###\s+Added\s*\n([\s\S]*?)(?=\n###\s|---|\Z)/i);
+                const changedSection = changesContent.match(/###\s+Changed\s*\n([\s\S]*?)(?=\n###\s|---|\Z)/i);
+                const removedSection = changesContent.match(/###\s+Removed\s*\n([\s\S]*?)(?=\n###\s|---|\Z)/i);
 
                 console.log("Added Section", addedSection);
                 console.log("Changed Section", changedSection);
